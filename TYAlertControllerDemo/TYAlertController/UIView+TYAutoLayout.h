@@ -21,6 +21,13 @@
 
 - (void)addConstraintWidth:(CGFloat)width height:(CGFloat)height;
 
+- (void)addConstraintEqualWithView:(UIView *)view width:(CGFloat)width height:(CGFloat)height;
+
+- (void)addConstraintWithViewHeight:(UIView *)view topView:(UIView *)topView leftView:(UIView *)leftView
+                    bottomView:(UIView *)bottomView rightView:(UIView *)rightView edgeInset:(UIEdgeInsets)edgeInset height:(CGFloat)height;
+
+- (void)addConstraintWithViewWidthHeight:(UIView *)view topView:(UIView *)topView rightView:(UIView *)rightView edgeInset:(UIEdgeInsets)edgeInset width:(CGFloat)width height:(CGFloat)height;
+
 - (void)addConstraintEqualWithView:(UIView *)view widthToView:(UIView *)wView heightToView:(UIView *)hView;
 
 - (NSLayoutConstraint *)addConstraintCenterYToView:(UIView *)yView constant:(CGFloat)constant;

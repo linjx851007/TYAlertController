@@ -15,7 +15,7 @@
 @end
 
 //current window
-#define kCurrentWindow [UIApplication sharedApplication].keyWindow
+#define kCurrentWindow [[UIApplication sharedApplication].windows firstObject]
 
 @implementation TYShowAlertView
 

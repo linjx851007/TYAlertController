@@ -9,9 +9,10 @@
 #import "TYAlertView.h"
 #import "UIView+TYAlertView.h"
 #import "UIView+TYAutoLayout.h"
-
+#import "NSString+Size.h"
 @interface TYAlertAction ()
 @property (nonatomic, strong) NSString *title;
+@property (nonatomic, strong) UIImage *img;
 @property (nonatomic, assign) TYAlertActionStyle style;
 @property (nonatomic, copy) void (^handler)(TYAlertAction *);
 @end
@@ -20,7 +21,12 @@
 
 + (instancetype)actionWithTitle:(NSString *)title style:(TYAlertActionStyle)style handler:(void (^)(TYAlertAction *))handler
 {
-    return [[self alloc]initWithTitle:title style:style handler:handler];
+    return [[self alloc] initWithTitle:title style:style handler:handler];
+}
+
++ (instancetype)actionWithImage:(UIImage *)img style:(TYAlertActionStyle)style handler:(void (^)(TYAlertAction *action))handler
+{
+    return [[self alloc] initWithImage:img style:style handler:handler];
 }
 
 - (instancetype)initWithTitle:(NSString *)title style:(TYAlertActionStyle)style handler:(void (^)(TYAlertAction *))handler
@@ -35,11 +41,24 @@
     return self;
 }
 
+- (instancetype)initWithImage:(UIImage *)img style:(TYAlertActionStyle)style handler:(void (^)(TYAlertAction *))handler
+{
+    if (self = [super init]) {
+        _img = img;
+        _style = style;
+        _handler = handler;
+        _enabled = YES;
+        
+    }
+    return self;
+}
+
 - (id)copyWithZone:(NSZone *)zone
 {
     TYAlertAction *action = [[self class]allocWithZone:zone];
     action.title = self.title;
     action.style = self.style;
+    action.img = self.img;
     return action;
 }
 
@@ -49,6 +68,7 @@
 @interface TYAlertView ()
 
 // text content View
+@property (nonatomic, weak) UIView *topContentView;
 @property (nonatomic, weak) UIView *textContentView;
 @property (nonatomic, weak) UILabel *titleLable;
 @property (nonatomic, weak) UILabel *messageLabel;
@@ -64,13 +84,16 @@
 @property (nonatomic, strong) NSMutableArray *buttons;
 @property (nonatomic, strong) NSMutableArray *actions;
 
+@property (nonatomic, strong) UIButton *closeButton;
+@property (nonatomic, strong) TYAlertAction *closeAction;
+
 @end
 
 #define kAlertViewWidth 280
 #define kContentViewEdge 15
 #define kContentViewSpace 15
-
-#define kTextLabelSpace  6
+#define kTextFieldViewSpace 20
+#define kTextLabelSpace  26
 
 #define kButtonTagOffset 1000
 #define kButtonSpace     6
@@ -81,6 +104,7 @@
 #define kTextFieldEdge  8
 #define KTextFieldBorderWidth 0.5
 
+#define kCloseButtonTag 3000
 
 @implementation TYAlertView
 
@@ -124,7 +148,7 @@
     self.backgroundColor = [UIColor whiteColor];
     _alertViewWidth = kAlertViewWidth;
     _contentViewSpace = kContentViewSpace;
-    
+    _textFieldViewSpace = kTextFieldViewSpace;//ljx
     _textLabelSpace = kTextLabelSpace;
     _textLabelContentViewEdge = kContentViewEdge;
     
@@ -147,6 +171,10 @@
     _textFieldBackgroudColor = [UIColor whiteColor];
     _textFieldFont = [UIFont systemFontOfSize:14];
     
+    self.titleFont = [UIFont fontWithName:@"HelveticaNeue-Bold" size:18];
+    self.contentFont = [UIFont fontWithName:@"HelveticaNeue" size:15];
+    self.titleColor = [UIColor colorWithRed:51/255.0 green:51/255.0 blue:51/255.0 alpha:1.0];
+    self.contentColor = [UIColor colorWithRed:51/255.0 green:51/255.0 blue:51/255.0 alpha:1.0];
     _buttons = [NSMutableArray array];
     _actions = [NSMutableArray array];
 }
@@ -170,6 +198,12 @@
 
 - (void)addContentViews
 {
+    UIView *topContentView = [[UIView alloc]init];
+    [self addSubview:topContentView];
+    _topContentView = topContentView;
+    topContentView.userInteractionEnabled = YES;
+    _topContentView.backgroundColor = self.topBgColor;
+    
     UIView *textContentView = [[UIView alloc]init];
     [self addSubview:textContentView];
     _textContentView = textContentView;
@@ -188,16 +222,16 @@
 {
     UILabel *titleLabel = [[UILabel alloc]init];
     titleLabel.textAlignment = NSTextAlignmentCenter;
-    titleLabel.font = [UIFont fontWithName:@"HelveticaNeue-Bold" size:18];
-    titleLabel.textColor = [UIColor colorWithRed:51/255.0 green:51/255.0 blue:51/255.0 alpha:1.0];
+    titleLabel.font = self.titleFont;
+    titleLabel.textColor = self.titleColor;
     [_textContentView addSubview:titleLabel];
     _titleLable = titleLabel;
     
     UILabel *messageLabel = [[UILabel alloc]init];
     messageLabel.numberOfLines = 0;
     messageLabel.textAlignment = NSTextAlignmentCenter;
-    messageLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:15];
-    messageLabel.textColor = [UIColor colorWithRed:51/255.0 green:51/255.0 blue:51/255.0 alpha:1.0];
+    messageLabel.font = self.contentFont;
+    messageLabel.textColor = self.contentColor;
     [_textContentView addSubview:messageLabel];
     _messageLabel = messageLabel;
 }
@@ -212,29 +246,68 @@
 
 - (void)addAction:(TYAlertAction *)action
 {
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    button.clipsToBounds = YES;
-    button.layer.cornerRadius = _buttonCornerRadius;
-    [button setTitle:action.title forState:UIControlStateNormal];
-    button.titleLabel.font = _buttonFont;
-    button.backgroundColor = [self buttonBgColorWithStyle:action.style];
-    button.enabled = action.enabled;
-    button.tag = kButtonTagOffset + _buttons.count;
-    button.translatesAutoresizingMaskIntoConstraints = NO;
-    [button addTarget:self action:@selector(actionButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
-    
-    [_buttonContentView addSubview:button];
-    [_buttons addObject:button];
-    [_actions addObject:action];
-    
-    if (_buttons.count == 1) {
+    if (action.style == TYAlertActionStyleClose)
+    {
+        UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+        button.clipsToBounds = YES;
+        [button setBackgroundImage:action.img forState:UIControlStateNormal];
+        button.enabled = action.enabled;
+        button.tag = kCloseButtonTag;
+        button.translatesAutoresizingMaskIntoConstraints = NO;
+        [button addTarget:self action:@selector(actionButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_topContentView addSubview:button];
+        self.closeAction = action;
+        self.closeButton = button;
+        
         [self layoutContentViews];
-        [self layoutTextLabels];
+    }
+    else{
+        UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
+        button.clipsToBounds = YES;
+        button.layer.cornerRadius = _buttonCornerRadius;
+        [button setTitle:action.title forState:UIControlStateNormal];
+        button.titleLabel.font = _buttonFont;
+        button.backgroundColor = [self buttonBgColorWithStyle:action.style];
+        button.enabled = action.enabled;
+        button.tag = kButtonTagOffset + _buttons.count;
+        button.translatesAutoresizingMaskIntoConstraints = NO;
+        [button addTarget:self action:@selector(actionButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_buttonContentView addSubview:button];
+        [_buttons addObject:button];
+        [_actions addObject:action];
+        
+        if (_buttons.count == 1) {
+            [self layoutContentViews];
+            [self layoutTextLabels];
+        }
+        
+        [self layoutButtons];
     }
     
-    [self layoutButtons];
 }
 
+- (void)addTextFieldWithConfigurationHandlerWithTitle:(NSString*)title handler:(void (^)(UITextField *textField))configurationHandler
+{
+    [self addTextFieldWithConfigurationHandler:configurationHandler];
+    
+    UIFont *titlefont = [UIFont systemFontOfSize:12.0];
+    CGSize titleSize = [title tt_sizeWithFont:titlefont];
+    UITextField *textField = [_textFields lastObject];
+    
+    UIView *leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, titleSize.width+15, _textFieldHeight)];
+    leftView.backgroundColor = [UIColor clearColor];
+    textField.leftView = leftView;
+    textField.leftViewMode = UITextFieldViewModeAlways;
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, titleSize.width, _textFieldHeight)];
+    titleLabel.font = titlefont;
+    titleLabel.backgroundColor = [UIColor clearColor];
+    titleLabel.textColor = [UIColor blackColor];
+    titleLabel.text = title;
+    [leftView addSubview:titleLabel];
+}
 - (void)addTextFieldWithConfigurationHandler:(void (^)(UITextField *textField))configurationHandler
 {
     if (_textFields == nil) {
@@ -245,32 +318,42 @@
     textField.tag = kTextFieldOffset + _textFields.count;
     textField.font = _textFieldFont;
     textField.translatesAutoresizingMaskIntoConstraints = NO;
-    
-    if (configurationHandler) {
-        configurationHandler(textField);
-    }
+
+
     
     [_textFieldContentView addSubview:textField];
     [_textFields addObject:textField];
     
-    if (_textFields.count > 1) {
+//    if (_textFields.count > 1)
+    {
         if (_textFieldSeparateViews == nil) {
             _textFieldSeparateViews = [NSMutableArray array];
         }
-        UIView *separateView = [[UIView alloc]init];
-        separateView.backgroundColor = _textFieldBorderColor;
-        separateView.translatesAutoresizingMaskIntoConstraints = NO;
-        [_textFieldContentView addSubview:separateView];
-        [_textFieldSeparateViews addObject:separateView];
+        UILabel *tipLabel = [[UILabel alloc]init];
+        tipLabel.backgroundColor = [UIColor clearColor];
+        tipLabel.font = [UIFont systemFontOfSize:11.0f];
+        tipLabel.textColor = [UIColor redColor];
+        [_textFieldContentView addSubview:tipLabel];
+        [_textFieldSeparateViews addObject:tipLabel];
     }
     
     [self layoutTextFields];
+    
+    if (configurationHandler) {
+        configurationHandler(textField);
+    }
 }
 
 - (NSArray *)textFieldArray
 {
     return _textFields;
 }
+
+- (NSArray *)titleTipArray
+{
+    return _textFieldSeparateViews;
+}
+
 
 #pragma mark - layout contenview
 
@@ -284,10 +367,29 @@
         [self addConstraintWidth:_alertViewWidth height:0];
     }
     
+    _topContentView.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    [self addConstraintWithViewHeight:_topContentView topView:self leftView:self bottomView:self rightView:self edgeInset:UIEdgeInsetsZero height:40];
+    
+    if (self.closeButton)
+    {
+        UIImage *img = self.closeAction.img;
+        CGSize imgSize = img.size;
+        UIEdgeInsets inset = UIEdgeInsetsMake(kContentViewEdge, 0, 0, -1*kContentViewEdge);
+        [_topContentView addConstraintWithViewWidthHeight:self.closeButton topView:_topContentView rightView:_topContentView edgeInset:inset width:imgSize.width height:imgSize.height];
+    }
+    
     // textContentView
     _textContentView.translatesAutoresizingMaskIntoConstraints = NO;
     
-    [self addConstraintWithView:_textContentView topView:self leftView:self bottomView:nil rightView:self edgeInset:UIEdgeInsetsMake(_contentViewSpace, _textLabelContentViewEdge, 0, -_textLabelContentViewEdge)];
+    
+    UIEdgeInsets titleInset = UIEdgeInsetsMake(_contentViewSpace, _textLabelContentViewEdge, 0, -_textLabelContentViewEdge);
+    if (self.closeButton)
+    {
+        titleInset = UIEdgeInsetsMake(_contentViewSpace, _textLabelContentViewEdge + 20, 0, -1 * (_textLabelContentViewEdge + 20));
+    }
+    
+    [self addConstraintWithView:_textContentView topView:self leftView:self bottomView:nil rightView:self edgeInset:titleInset];
     
     // textFieldContentView
     _textFieldContentView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -356,29 +458,38 @@
 {
     UITextField *textField = _textFields.lastObject;
     
-    if (_textFields.count == 1) {
-        // setup textFieldContentView
-        _textFieldContentView.backgroundColor = _textFieldBackgroudColor;
-        _textFieldContentView.layer.masksToBounds = YES;
-        _textFieldContentView.layer.cornerRadius = 4;
-        _textFieldContentView.layer.borderWidth = _textFieldBorderWidth;
-        _textFieldContentView.layer.borderColor = _textFieldBorderColor.CGColor;
+    textField.backgroundColor = _textFieldBackgroudColor;
+    textField.layer.masksToBounds = YES;
+    textField.layer.cornerRadius = 8;
+    textField.layer.borderWidth = _textFieldBorderWidth;
+    textField.layer.borderColor = _textFieldBorderColor.CGColor;
+    
+    if (_textFields.count == 1)
+    {
         _textFieldTopConstraint.constant = -_contentViewSpace;
-        [_textFieldContentView addConstraintToView:textField edgeInset:UIEdgeInsetsMake(_textFieldBorderWidth, _textFieldEdge, -_textFieldBorderWidth, -_textFieldEdge)];
+        [_textFieldContentView addConstraintToView:textField edgeInset:UIEdgeInsetsMake(_textFieldBorderWidth, _textFieldEdge, -1*(_textFieldBorderWidth+_textFieldViewSpace), -_textFieldEdge)];
         [textField addConstraintWidth:0 height:_textFieldHeight];
-    }else {
+    }
+    else
+    {
         // textField
         UITextField *lastSecondTextField = _textFields[_textFields.count - 2];
         [_textFieldContentView removeConstraintWithView:lastSecondTextField attribute:NSLayoutAttributeBottom];
-        [_textFieldContentView addConstraintWithTopView:lastSecondTextField toBottomView:textField constant:_textFieldBorderWidth];
+        [_textFieldContentView addConstraintWithTopView:lastSecondTextField toBottomView:textField constant:_textFieldBorderWidth+_textFieldViewSpace];
         [_textFieldContentView addConstraintWithView:textField topView:nil leftView:_textFieldContentView bottomView:_textFieldContentView rightView:_textFieldContentView edgeInset:UIEdgeInsetsMake(0, _textFieldEdge, -_textFieldBorderWidth, -_textFieldEdge)];
         [_textFieldContentView addConstraintEqualWithView:textField widthToView:nil heightToView:lastSecondTextField];
         
-        // separateview
-        UIView *separateView = _textFieldSeparateViews[_textFields.count - 2];
-        [_textFieldContentView addConstraintWithView:separateView topView:nil leftView:_textFieldContentView bottomView:nil rightView:_textFieldContentView edgeInset:UIEdgeInsetsZero];
-        [_textFieldContentView addConstraintWithTopView:separateView toBottomView:textField constant:0];
-        [separateView addConstraintWidth:0 height:_textFieldBorderWidth];
+        lastSecondTextField.backgroundColor = _textFieldBackgroudColor;
+        lastSecondTextField.layer.masksToBounds = YES;
+        lastSecondTextField.layer.cornerRadius = 8;
+        lastSecondTextField.layer.borderWidth = _textFieldBorderWidth;
+        lastSecondTextField.layer.borderColor = _textFieldBorderColor.CGColor;
+        
+        textField.backgroundColor = _textFieldBackgroudColor;
+        textField.layer.masksToBounds = YES;
+        textField.layer.cornerRadius = 8;
+        textField.layer.borderWidth = _textFieldBorderWidth;
+        textField.layer.borderColor = _textFieldBorderColor.CGColor;
     }
 }
 
@@ -386,15 +497,27 @@
 
 - (void)actionButtonClicked:(UIButton *)button
 {
-    TYAlertAction *action = _actions[button.tag - kButtonTagOffset];
-    
-    if (_clickedAutoHide) {
+    NSInteger btnTag = button.tag;
+    if (btnTag == kCloseButtonTag) {
+        TYAlertAction *action = self.closeAction;
         [self hideView];
+        if (action.handler) {
+            action.handler(action);
+        }
+    }
+    else
+    {
+        TYAlertAction *action = _actions[btnTag - kButtonTagOffset];
+        
+        if (_clickedAutoHide) {
+            [self hideView];
+        }
+        
+        if (action.handler) {
+            action.handler(action);
+        }
     }
     
-    if (action.handler) {
-        action.handler(action);
-    }
 }
 
 //- (void)dealloc

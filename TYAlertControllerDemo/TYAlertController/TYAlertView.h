@@ -12,13 +12,15 @@ typedef NS_ENUM(NSUInteger, TYAlertActionStyle) {
     TYAlertActionStyleDefault,
     TYAlertActionStyleCancel,
     TYAlertActionStyleDestructive,
+    TYAlertActionStyleClose,
 };
 
 @interface TYAlertAction : NSObject <NSCopying>
 
 + (instancetype)actionWithTitle:(NSString *)title style:(TYAlertActionStyle)style handler:(void (^)(TYAlertAction *action))handler;
-
++ (instancetype)actionWithImage:(UIImage *)img style:(TYAlertActionStyle)style handler:(void (^)(TYAlertAction *action))handler;
 @property (nonatomic, readonly) NSString *title;
+@property (nonatomic, readonly) UIImage *img;
 @property (nonatomic, readonly) TYAlertActionStyle style;
 @property (nonatomic, getter=isEnabled) BOOL enabled;
 
@@ -29,15 +31,21 @@ typedef NS_ENUM(NSUInteger, TYAlertActionStyle) {
 
 @property (nonatomic, weak, readonly) UILabel *titleLable;
 @property (nonatomic, weak, readonly) UILabel *messageLabel;
-
+@property (nonatomic, strong) UIColor *topBgColor;
+@property (nonatomic, strong) UIFont *titleFont;
+@property (nonatomic, strong) UIColor *titleColor;
+@property (nonatomic, strong) UIFont *contentFont;
+@property (nonatomic, strong) UIColor *contentColor;
 // alertView textfield array
 @property (nonatomic, strong, readonly) NSArray *textFieldArray;
+@property (nonatomic, strong, readonly) NSArray *titleTipArray;
 
 // default 280, if 0 don't add width constraint,
 @property (nonatomic, assign) CGFloat alertViewWidth;
 
 // contentView space custom
 @property (nonatomic, assign) CGFloat contentViewSpace;
+@property (nonatomic, assign) CGFloat textFieldViewSpace;
 
 // textLabel custom
 @property (nonatomic, assign) CGFloat textLabelSpace;
@@ -65,11 +73,14 @@ typedef NS_ENUM(NSUInteger, TYAlertActionStyle) {
 
 @property (nonatomic, assign) BOOL clickedAutoHide;
 
-
 + (instancetype)alertViewWithTitle:(NSString *)title message:(NSString *)message;
+
+- (void)configureProperty;
 
 - (void)addAction:(TYAlertAction *)action;
 
 - (void)addTextFieldWithConfigurationHandler:(void (^)(UITextField *textField))configurationHandler;
+
+- (void)addTextFieldWithConfigurationHandlerWithTitle:(NSString*)title handler:(void (^)(UITextField *textField))configurationHandler;
 
 @end
