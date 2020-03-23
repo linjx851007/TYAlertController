@@ -331,7 +331,7 @@
         }
         UILabel *tipLabel = [[UILabel alloc]init];
         tipLabel.backgroundColor = [UIColor clearColor];
-        tipLabel.font = [UIFont systemFontOfSize:11.0f];
+        tipLabel.font = self.tipLabelFont;
         tipLabel.textColor = [UIColor redColor];
         [_textFieldContentView addSubview:tipLabel];
         [_textFieldSeparateViews addObject:tipLabel];

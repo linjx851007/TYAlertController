@@ -36,6 +36,7 @@ typedef NS_ENUM(NSUInteger, TYAlertActionStyle) {
 @property (nonatomic, strong) UIColor *titleColor;
 @property (nonatomic, strong) UIFont *contentFont;
 @property (nonatomic, strong) UIColor *contentColor;
+@property (nonatomic, strong) UIFont *tipLabelFont;
 // alertView textfield array
 @property (nonatomic, strong, readonly) NSArray *textFieldArray;
 @property (nonatomic, strong, readonly) NSArray *titleTipArray;
