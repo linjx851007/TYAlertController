@@ -108,7 +108,9 @@
 - (IBAction)blurEffectAlertViewAction:(id)sender {
     ShareView *shareView = [ShareView createViewFromNib];
     
-    TYAlertController *alertController = [TYAlertController alertControllerWithAlertView:shareView preferredStyle:TYAlertControllerStyleAlert];
+    UIView *showView = [[UIView alloc] initWithFrame:CGRectMake(0, 30, 500, 800)];
+    showView.backgroundColor = [UIColor redColor];
+    TYAlertController *alertController = [TYAlertController alertControllerWithAlertView:showView preferredStyle:TYAlertControllerStyleAlert];
     
     // blur effect
     [alertController setBlurEffectWithView:self.view];

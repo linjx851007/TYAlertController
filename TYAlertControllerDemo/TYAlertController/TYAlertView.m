@@ -127,10 +127,17 @@
 - (instancetype)initWithTitle:(NSString *)title message:(NSString *)message
 {
     if (self = [self init]) {
-        
         _titleLable.text = title;
         _messageLabel.text = message;
-        
+    }
+    return self;
+}
+
+- (instancetype)initWithTitle:(NSString *)title attributedMessage:(NSAttributedString *)message
+{
+    if (self = [self init]) {
+        _titleLable.text = title;
+        _messageLabel.attributedText = message;
     }
     return self;
 }
@@ -139,7 +146,10 @@
 {
     return [[self alloc]initWithTitle:title message:message];
 }
-
++ (instancetype)alertViewWithTitle:(NSString *)title attributedMessage:(NSAttributedString *)message
+{
+    return [[self alloc]initWithTitle:title attributedMessage:message];
+}
 #pragma mark - configure
 
 - (void)configureProperty
@@ -151,7 +161,7 @@
     _textFieldViewSpace = kTextFieldViewSpace;//ljx
     _textLabelSpace = kTextLabelSpace;
     _textLabelContentViewEdge = kContentViewEdge;
-    
+    _textFieldCornerRadius = 15;
     _buttonHeight = KButtonHeight;
     _buttonSpace = kButtonSpace;
     _buttonContentViewEdge = kContentViewEdge;
@@ -229,7 +239,7 @@
     
     UILabel *messageLabel = [[UILabel alloc]init];
     messageLabel.numberOfLines = 0;
-    messageLabel.textAlignment = NSTextAlignmentCenter;
+    messageLabel.textAlignment = NSTextAlignmentLeft;
     messageLabel.font = self.contentFont;
     messageLabel.textColor = self.contentColor;
     [_textContentView addSubview:messageLabel];
@@ -250,7 +260,8 @@
     {
         UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
         button.clipsToBounds = YES;
-        [button setBackgroundImage:action.img forState:UIControlStateNormal];
+        [button setImage:action.img forState:UIControlStateNormal];
+//        [button setBackgroundImage:action.img forState:UIControlStateNormal];
         button.enabled = action.enabled;
         button.tag = kCloseButtonTag;
         button.translatesAutoresizingMaskIntoConstraints = NO;
@@ -292,7 +303,7 @@
 {
     [self addTextFieldWithConfigurationHandler:configurationHandler];
     
-    UIFont *titlefont = [UIFont systemFontOfSize:12.0];
+    UIFont *titlefont = [UIFont systemFontOfSize:14.0];
     CGSize titleSize = [title tt_sizeWithFont:titlefont];
     UITextField *textField = [_textFields lastObject];
     
@@ -304,7 +315,27 @@
     UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, titleSize.width, _textFieldHeight)];
     titleLabel.font = titlefont;
     titleLabel.backgroundColor = [UIColor clearColor];
-    titleLabel.textColor = [UIColor blackColor];
+    titleLabel.textColor = [UIColor colorWithRed:42.0/255.0f green:42.0/255.0f blue:42.0/255.0f alpha:1.0f];
+    titleLabel.text = title;
+    [leftView addSubview:titleLabel];
+}
+- (void)addTextViewWithConfigurationHandlerWithTitle:(NSString*)title handler:(void (^)(UITextView *textField))configurationHandler
+{
+    [self addTextViewWithConfigurationHandler:configurationHandler];
+    
+    UIFont *titlefont = [UIFont systemFontOfSize:14.0];
+    CGSize titleSize = [title tt_sizeWithFont:titlefont];
+    UITextView *textField = [_textFields lastObject];
+    
+    UIView *leftView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, titleSize.width+15, _textFieldHeight)];
+    leftView.backgroundColor = [UIColor clearColor];
+//    textField.leftView = leftView;
+//    textField.leftViewMode = UITextFieldViewModeAlways;
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(10, 0, titleSize.width, _textFieldHeight)];
+    titleLabel.font = titlefont;
+    titleLabel.backgroundColor = [UIColor clearColor];
+    titleLabel.textColor = [UIColor colorWithRed:42.0/255.0f green:42.0/255.0f blue:42.0/255.0f alpha:1.0f];
     titleLabel.text = title;
     [leftView addSubview:titleLabel];
 }
@@ -315,6 +346,42 @@
     }
     
     UITextField *textField = [[UITextField alloc]init];
+    textField.tag = kTextFieldOffset + _textFields.count;
+    textField.font = _textFieldFont;
+    textField.translatesAutoresizingMaskIntoConstraints = NO;
+
+
+    
+    [_textFieldContentView addSubview:textField];
+    [_textFields addObject:textField];
+    
+//    if (_textFields.count > 1)
+    {
+        if (_textFieldSeparateViews == nil) {
+            _textFieldSeparateViews = [NSMutableArray array];
+        }
+        UILabel *tipLabel = [[UILabel alloc]init];
+        tipLabel.backgroundColor = [UIColor clearColor];
+        tipLabel.font = self.tipLabelFont;
+        tipLabel.textColor = [UIColor redColor];
+        [_textFieldContentView addSubview:tipLabel];
+        [_textFieldSeparateViews addObject:tipLabel];
+    }
+    
+    [self layoutTextFields];
+    
+    if (configurationHandler) {
+        configurationHandler(textField);
+    }
+}
+
+- (void)addTextViewWithConfigurationHandler:(void (^)(UITextView *textField))configurationHandler
+{
+    if (_textFields == nil) {
+        _textFields = [NSMutableArray array];
+    }
+    
+    UITextView *textField = [[UITextView alloc]init];
     textField.tag = kTextFieldOffset + _textFields.count;
     textField.font = _textFieldFont;
     textField.translatesAutoresizingMaskIntoConstraints = NO;
@@ -374,11 +441,11 @@
     if (self.closeButton)
     {
         UIImage *img = self.closeAction.img;
-        CGSize imgSize = img.size;
-        UIEdgeInsets inset = UIEdgeInsetsMake(kContentViewEdge, 0, 0, -1*kContentViewEdge);
+        CGSize imgSize = CGSizeMake(img.size.width*2, img.size.height*2);
+        UIEdgeInsets inset = UIEdgeInsetsMake(kContentViewEdge/2, 0, 0, -1*(kContentViewEdge/2)); //临时，因为上面x2
         [_topContentView addConstraintWithViewWidthHeight:self.closeButton topView:_topContentView rightView:_topContentView edgeInset:inset width:imgSize.width height:imgSize.height];
     }
-    
+//    self.closeButton.backgroundColor = [UIColor redColor];
     // textContentView
     _textContentView.translatesAutoresizingMaskIntoConstraints = NO;
     
@@ -460,7 +527,7 @@
     
     textField.backgroundColor = _textFieldBackgroudColor;
     textField.layer.masksToBounds = YES;
-    textField.layer.cornerRadius = 8;
+    textField.layer.cornerRadius = _textFieldCornerRadius;
     textField.layer.borderWidth = _textFieldBorderWidth;
     textField.layer.borderColor = _textFieldBorderColor.CGColor;
     
@@ -481,13 +548,13 @@
         
         lastSecondTextField.backgroundColor = _textFieldBackgroudColor;
         lastSecondTextField.layer.masksToBounds = YES;
-        lastSecondTextField.layer.cornerRadius = 8;
+        lastSecondTextField.layer.cornerRadius = _textFieldCornerRadius;
         lastSecondTextField.layer.borderWidth = _textFieldBorderWidth;
         lastSecondTextField.layer.borderColor = _textFieldBorderColor.CGColor;
         
         textField.backgroundColor = _textFieldBackgroudColor;
         textField.layer.masksToBounds = YES;
-        textField.layer.cornerRadius = 8;
+        textField.layer.cornerRadius = _textFieldCornerRadius;
         textField.layer.borderWidth = _textFieldBorderWidth;
         textField.layer.borderColor = _textFieldBorderColor.CGColor;
     }

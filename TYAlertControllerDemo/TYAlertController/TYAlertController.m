@@ -326,7 +326,12 @@
     //当开启热点时，向下偏移20px
     //修复键盘遮挡问题
     CGFloat statusBarHeight = [UIApplication sharedApplication].statusBarFrame.size.height;
-    CGFloat differ = CGRectGetHeight(keyboardRect) - alertViewBottomEdge;
+    CGFloat differ = CGRectGetHeight(keyboardRect)/2 - alertViewBottomEdge;
+    if (differ < 0)
+    {
+        differ = CGRectGetHeight(keyboardRect) - alertViewBottomEdge;
+    }
+    //修复，ipad弹太高了。先改成CGRectGetHeight(keyboardRect)的一半，CGRectGetHeight(keyboardRect)/2试试。
 
     //修复：输入框获取焦点时，会重复刷新，导致输入框文章偏移一下
     if (_alertViewCenterYConstraint.constant == -differ -statusBarHeight) {

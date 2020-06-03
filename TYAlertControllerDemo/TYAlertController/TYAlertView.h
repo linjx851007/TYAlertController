@@ -68,6 +68,7 @@ typedef NS_ENUM(NSUInteger, TYAlertActionStyle) {
 @property (nonatomic, strong) UIColor *textFieldBackgroudColor;
 @property (nonatomic, strong) UIFont *textFieldFont;
 @property (nonatomic, assign) CGFloat textFieldHeight;
+@property (nonatomic, assign) CGFloat textFieldCornerRadius;
 @property (nonatomic, assign) CGFloat textFieldEdge;
 @property (nonatomic, assign) CGFloat textFieldBorderWidth;
 @property (nonatomic, assign) CGFloat textFieldContentViewEdge;
@@ -75,13 +76,14 @@ typedef NS_ENUM(NSUInteger, TYAlertActionStyle) {
 @property (nonatomic, assign) BOOL clickedAutoHide;
 
 + (instancetype)alertViewWithTitle:(NSString *)title message:(NSString *)message;
-
++ (instancetype)alertViewWithTitle:(NSString *)title attributedMessage:(NSAttributedString *)message;
 - (void)configureProperty;
 
 - (void)addAction:(TYAlertAction *)action;
 
 - (void)addTextFieldWithConfigurationHandler:(void (^)(UITextField *textField))configurationHandler;
-
+- (void)addTextViewWithConfigurationHandler:(void (^)(UITextView *textField))configurationHandler;
 - (void)addTextFieldWithConfigurationHandlerWithTitle:(NSString*)title handler:(void (^)(UITextField *textField))configurationHandler;
+- (void)addTextViewWithConfigurationHandlerWithTitle:(NSString*)title handler:(void (^)(UITextView *textField))configurationHandler;
 
 @end
